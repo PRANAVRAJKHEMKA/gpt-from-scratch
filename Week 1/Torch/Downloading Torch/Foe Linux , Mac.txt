@@ -1,0 +1,47 @@
+
+#!/usr/bin/env bash
+set -e
+
+echo "=== Automatic PyTorch CPU Installer ==="
+
+# Detect the active Python interpreter
+if command -v python >/dev/null 2>&1; then
+    PYTHON=python
+elif command -v python3 >/dev/null 2>&1; then
+    PYTHON=python3
+else
+    echo "Python not found. Activate your environment first."
+    exit 1
+fi
+
+PY="$("$PYTHON" -c 'import sys; print(sys.executable)')"
+
+echo "Python executable: $PY"
+
+# Check Python compatibility
+"$PY" -c 'import sys; assert sys.version_info >= (3, 11), "Python 3.11 or later required."'
+
+# Check pip
+if ! "$PY" -m pip --version >/dev/null 2>&1; then
+    "$PY" -m ensurepip --upgrade
+fi
+
+# Update pip
+"$PY" -m pip install --upgrade pip
+
+# Install PyTorch
+if [ "$(uname -s)" = "Darwin" ]; then
+    # macOS: use the official standard PyTorch wheels
+    "$PY" -m pip install torch
+else
+    # Linux: CPU-only PyTorch wheels
+    "$PY" -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+fi
+
+# Install NumPy
+"$PY" -m pip install numpy
+
+# Verify
+"$PY" -c "import sys, torch, numpy; print('Python:', sys.executable); print('PyTorch:', torch.__version__); print('NumPy:', numpy.__version__); print('Random tensor:', torch.rand(3)); print('CUDA available:', torch.cuda.is_available())"
+
+echo "PyTorch installation completed successfully!"

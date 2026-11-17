@@ -1,0 +1,77 @@
+
+$ErrorActionPreference = "Stop"
+
+Write-Host "`n=== Automatic PyTorch CPU Installer ===" -ForegroundColor Cyan
+
+# Detect the currently active Python interpreter
+if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
+    throw "Python not found. Activate your Python or Conda environment first."
+}
+
+$PY = (& python -c "import sys; print(sys.executable)").Trim()
+
+if ($LASTEXITCODE -ne 0) {
+    throw "Could not identify the active Python interpreter."
+}
+
+Write-Host "Python executable: $PY" -ForegroundColor Yellow
+
+# Check Python compatibility
+$VERSION = & $PY -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
+
+if ($LASTEXITCODE -ne 0) {
+    throw "Unable to detect Python version."
+}
+
+Write-Host "Python version: $VERSION"
+
+if ([version]$VERSION -lt [version]"3.11") {
+    throw "Latest stable PyTorch requires Python 3.11 or later. Activate a compatible environment."
+}
+
+# Check pip
+& $PY -m pip --version
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Installing pip..."
+    & $PY -m ensurepip --upgrade
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not initialize pip."
+    }
+}
+
+# Update pip
+Write-Host "`nUpdating pip..." -ForegroundColor Cyan
+& $PY -m pip install --upgrade pip
+
+if ($LASTEXITCODE -ne 0) {
+    throw "Pip update failed."
+}
+
+# Install PyTorch CPU
+Write-Host "`nInstalling PyTorch CPU..." -ForegroundColor Cyan
+& $PY -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+if ($LASTEXITCODE -ne 0) {
+    throw "PyTorch installation failed."
+}
+
+# Install NumPy
+Write-Host "`nInstalling NumPy..." -ForegroundColor Cyan
+& $PY -m pip install numpy
+
+if ($LASTEXITCODE -ne 0) {
+    throw "NumPy installation failed."
+}
+
+# Verify installation
+Write-Host "`n=== Verification ===" -ForegroundColor Green
+
+& $PY -c "import sys, torch, numpy; print('Python:', sys.executable); print('PyTorch:', torch.__version__); print('NumPy:', numpy.__version__); print('Random tensor:', torch.rand(3)); print('CUDA available:', torch.cuda.is_available())"
+
+if ($LASTEXITCODE -ne 0) {
+    throw "PyTorch verification failed."
+}
+
+Write-Host "`nPyTorch installation completed successfully!" -ForegroundColor Green
